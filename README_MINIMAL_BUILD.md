@@ -2,9 +2,31 @@
 
 This guide helps you build a custom Godot 4.4 with minimal RAM usage by disabling unnecessary features and modules.
 
+## Important: Editor vs Export Templates
+
+**These builds create EXPORT TEMPLATES, not the editor itself.** Here's the difference:
+
+### Export Templates (`target=template_release`)
+- Used when you export your game from the Godot editor
+- These are the runtime engines that run your exported games
+- Much smaller and more optimized than the editor
+- This is what reduces RAM usage in your final exported games
+
+### Godot Editor (`target=editor`)
+- The development environment you use to create games
+- Much larger because it includes all development tools
+- You still use the standard Godot editor for development
+
+## Development Workflow
+
+1. **Use the standard Godot editor** for development (download from godotengine.org)
+2. **Build minimal export templates** using these scripts
+3. **Configure your project** to use the minimal export templates
+4. **Export your game** - it will use the minimal runtime engine
+
 ## Overview
 
-The minimal build removes:
+The minimal build removes from export templates:
 - 3D rendering and physics (heaviest RAM consumers)
 - XR/VR support
 - Advanced GUI features
@@ -21,6 +43,8 @@ The minimal build removes:
    ```
 
 2. **Python 3.8+** (required for SCons)
+
+3. **Standard Godot Editor** (download from godotengine.org for development)
 
 ## Quick Build
 
@@ -42,6 +66,46 @@ If you prefer manual control, use the custom profile:
 ```bash
 scons platform=linuxbsd target=template_release profile=custom optimize=size_extra lto=full production=yes -j4
 ```
+
+## Using Minimal Export Templates
+
+### 1. Build the Templates
+```bash
+python3 build_minimal_godot.py
+```
+
+### 2. Find Your Templates
+After building, you'll find export templates in:
+- `bin/godot.linuxbsd.template_release.x86_64` (Linux)
+- `bin/godot.windows.template_release.x86_64.exe` (Windows)
+- `bin/godot.macos.template_release.x86_64` (macOS)
+
+### 3. Configure Godot Editor
+1. Open your Godot project in the standard editor
+2. Go to **Project → Project Settings → Export**
+3. Select your export preset (e.g., "Linux/X11")
+4. In **Export Path**, set where you want your game exported
+5. **Important**: In **Custom Template**, browse to your minimal export template
+6. Click **Export Project**
+
+### 4. Export Your Game
+- Your exported game will now use the minimal runtime engine
+- Significantly reduced RAM usage compared to standard exports
+- Same development experience, smaller final game
+
+## Building a Minimal Editor (Optional)
+
+If you also want a minimal editor for development:
+
+```bash
+# Build minimal editor
+scons platform=linuxbsd target=editor profile=custom optimize=size_extra lto=full production=yes -j4
+
+# Or use the script
+python3 build_minimal_editor.py
+```
+
+**Note**: The editor will still be large because it needs development tools, but it will be smaller than the standard editor.
 
 ## Customization
 
@@ -92,9 +156,9 @@ essential_modules = [
 
 ## Build Targets
 
-- `template_release` - Export templates for release builds
+- `template_release` - Export templates for release builds (what these scripts build)
 - `template_debug` - Export templates for debug builds
-- `editor` - Godot editor (not recommended for minimal builds)
+- `editor` - Godot editor (not built by default scripts)
 
 ## Platform-Specific Notes
 
@@ -116,8 +180,8 @@ essential_modules = [
 ## Expected Results
 
 A minimal build should:
-- Reduce binary size by 40-60%
-- Reduce RAM usage by 30-50%
+- Reduce export template size by 40-60%
+- Reduce exported game RAM usage by 30-50%
 - Maintain 2D functionality
 - Keep essential networking and audio
 
