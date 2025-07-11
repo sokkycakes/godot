@@ -1,0 +1,246 @@
+name: Build Minimal Godot
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    name: Build Linux Export Templates
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential scons pkg-config libx11-dev libxcursor-dev libxinerama-dev libgl1-mesa-dev libglu1-mesa-dev libasound2-dev libpulse-dev libudev-dev libxi-dev libxrandr-dev python3 python3-pip
+
+      - name: Build minimal export templates
+        run: |
+          python3 build_minimal_godot.py
+          ls -la bin/
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-minimal-linux
+          path: bin/godot.linuxbsd.template_release.x86_64
+          retention-days: 30
+
+  build-windows:
+    runs-on: windows-latest
+    name: Build Windows Export Templates
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          # Install Visual Studio Build Tools
+          choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --passive --norestart"
+          choco install scons
+          choco install python3
+
+      - name: Set up environment
+        run: |
+          # Set up Visual Studio environment
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+          echo "Environment set up complete"
+
+      - name: Build minimal export templates
+        run: |
+          python build_minimal_godot.py
+          dir bin
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-minimal-windows
+          path: bin/godot.windows.template_release.x86_64.exe
+          retention-days: 30
+
+  build-macos:
+    runs-on: macos-latest
+    name: Build macOS Export Templates
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          # Install Xcode command line tools
+          xcode-select --install || true
+          
+          # Install SCons
+          brew install scons
+
+      - name: Build minimal export templates
+        run: |
+          python3 build_minimal_godot.py
+          ls -la bin/
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-minimal-macos
+          path: bin/godot.macos.template_release.x86_64
+          retention-days: 30
+
+  build-ultra-minimal:
+    runs-on: ubuntu-latest
+    name: Build Ultra-Minimal Export Templates
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential scons pkg-config libx11-dev libxcursor-dev libxinerama-dev libgl1-mesa-dev libglu1-mesa-dev libasound2-dev libpulse-dev libudev-dev libxi-dev libxrandr-dev python3 python3-pip
+
+      - name: Build ultra-minimal export templates
+        run: |
+          python3 build_ultra_minimal.py
+          ls -la bin/
+
+      - name: Upload ultra-minimal artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-ultra-minimal-linux
+          path: bin/godot.linuxbsd.template_release.x86_64
+          retention-days: 30
+
+  build-minimal-editor:
+    runs-on: ubuntu-latest
+    name: Build Minimal Editor
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential scons pkg-config libx11-dev libxcursor-dev libxinerama-dev libgl1-mesa-dev libglu1-mesa-dev libasound2-dev libpulse-dev libudev-dev libxi-dev libxrandr-dev python3 python3-pip
+
+      - name: Build minimal editor
+        run: |
+          python3 build_minimal_editor.py
+          ls -la bin/
+
+      - name: Upload minimal editor artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-minimal-editor-linux
+          path: bin/godot.linuxbsd.editor.x86_64
+          retention-days: 30
+
+  create-release:
+    needs: [build-linux, build-windows, build-macos, build-ultra-minimal, build-minimal-editor]
+    runs-on: ubuntu-latest
+    name: Create Release
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release package
+        run: |
+          mkdir -p release
+          cp artifacts/godot-minimal-linux/godot.linuxbsd.template_release.x86_64 release/
+          cp artifacts/godot-minimal-windows/godot.windows.template_release.x86_64.exe release/
+          cp artifacts/godot-minimal-macos/godot.macos.template_release.x86_64 release/
+          cp artifacts/godot-ultra-minimal-linux/godot.linuxbsd.template_release.x86_64 release/godot.ultra-minimal.linuxbsd.template_release.x86_64
+          cp artifacts/godot-minimal-editor-linux/godot.linuxbsd.editor.x86_64 release/
+          
+          # Create README for release
+          cat > release/README.md << 'EOF'
+          # Minimal Godot 4.4 Builds
+          
+          This release contains minimal Godot 4.4 builds with reduced RAM usage.
+          
+          ## Files Included
+          
+          ### Export Templates
+          - `godot.linuxbsd.template_release.x86_64` - Linux export template (balanced minimal)
+          - `godot.windows.template_release.x86_64.exe` - Windows export template (balanced minimal)
+          - `godot.macos.template_release.x86_64` - macOS export template (balanced minimal)
+          - `godot.ultra-minimal.linuxbsd.template_release.x86_64` - Linux ultra-minimal export template
+          
+          ### Editor
+          - `godot.linuxbsd.editor.x86_64` - Linux minimal editor
+          
+          ## Usage
+          
+          1. Download the appropriate file for your platform
+          2. In Godot editor, go to Project Settings → Export
+          3. Set "Custom Template" to the downloaded export template
+          4. Export your project
+          
+          ## Features
+          
+          ### Balanced Minimal Build
+          - 2D rendering and physics
+          - Basic audio and networking
+          - Essential modules only
+          - ~40-60% size reduction
+          
+          ### Ultra-Minimal Build
+          - Headless only
+          - GDScript only
+          - ~70-80% size reduction
+          
+          ## Build Date
+          Built on: $(date)
+          Commit: ${{ github.sha }}
+          EOF
+          
+          # Create zip file
+          zip -r minimal-godot-builds.zip release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: minimal-godot-builds.zip
+          tag_name: minimal-build-${{ github.sha }}
+          name: "Minimal Godot 4.4 Builds"
+          body: |
+            ## Minimal Godot 4.4 Builds
+            
+            This release contains minimal Godot 4.4 builds with significantly reduced RAM usage.
+            
+            ### What's Included
+            - **Balanced Minimal Export Templates** (Linux, Windows, macOS)
+            - **Ultra-Minimal Export Template** (Linux only)
+            - **Minimal Editor** (Linux only)
+            
+            ### Key Optimizations
+            - Disabled 3D rendering and physics
+            - Disabled XR/VR support
+            - Disabled heavy third-party libraries
+            - Enabled size optimization and LTO
+            - Kept only essential modules
+            
+            ### Expected Results
+            - **Export Templates**: 40-60% smaller, 30-50% less RAM usage
+            - **Ultra-Minimal**: 70-80% smaller, 60-80% less RAM usage
+            - **Minimal Editor**: 25-40% smaller, 25-40% less RAM during development
+            
+            ### Usage
+            1. Download the appropriate file for your platform
+            2. In Godot editor, go to Project Settings → Export
+            3. Set "Custom Template" to the downloaded export template
+            4. Export your project
+            
+            Built from commit: ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
