@@ -162,6 +162,12 @@
 				[b]Warning:[/b] Removing and freeing this node will render a part of the editor useless and may cause a crash.
 			</description>
 		</method>
+		<method name="get_node_3d_editor_state" qualifiers="const">
+			<return type="Dictionary" />
+			<description>
+				Returns the 3D editor's state: snapping ([code]snap_enabled[/code], [code]translate_snap[/code], [code]rotate_snap[/code], [code]scale_snap[/code]), [code]local_coords[/code], [code]viewport_mode[/code] ([code]1[/code] to [code]6[/code]), the per-viewport states in [code]viewports[/code], [code]show_grid[/code], [code]show_origin[/code], [code]fov[/code], [code]znear[/code], [code]zfar[/code], [code]gizmos_status[/code] and [code]preview_sun_env[/code]. This is the same dictionary the editor saves with each scene.
+			</description>
+		</method>
 		<method name="get_open_scene_roots" qualifiers="const">
 			<return type="Node[]" />
 			<description>
@@ -451,6 +457,13 @@
 			<param index="0" name="name" type="String" />
 			<description>
 				Sets the editor's current main screen to the one specified in [param name]. [param name] must match the title of the tab in question exactly (e.g. [code]2D[/code], [code]3D[/code], [code skip-lint]Script[/code], [code]Game[/code], or [code]AssetLib[/code] for default tabs).
+			</description>
+		</method>
+		<method name="set_node_3d_editor_state">
+			<return type="void" />
+			<param index="0" name="state" type="Dictionary" />
+			<description>
+				Applies a 3D editor state in the form returned by [method get_node_3d_editor_state]. Keys that are left out keep their current values, so [code]{ "snap_enabled": true, "translate_snap": 0.25 }[/code] only changes snapping.
 			</description>
 		</method>
 		<method name="set_plugin_enabled">
